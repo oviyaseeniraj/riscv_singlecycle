@@ -25,14 +25,23 @@ module ucsbece154a_datapath (
 
 /// Your code here
 // --- Program Counter ---
-always @(posedge clk or posedge reset) begin
-    if (reset) 
-        pc_o <= 0;
-    else if (PCSrc_i)
+always @ * begin
+    // if (reset) 
+    //     pc_o <= 0;
+    if (PCSrc_i)
         pc_o <= pc_o + (sign_extended_imm); // Branch/Jump target
     else
         pc_o <= pc_o + 4; // Default PC increment
 end
+
+// --- Instruction Memory ---
+wire [31:0] instr;
+assign instr = instr_i;
+ucsbece154a_imem imem_inst (
+    .a_i(pc_o),
+    .rd_o(instr)
+);
+
 
 // --- Register File ---
 wire [31:0] rd1, rd2;  // Read data
@@ -44,19 +53,20 @@ ucsbece154a_rf rf (
     .rd1_o(rd1),
     .rd2_o(rd2),
     .we3_i(RegWrite_i),
-    .wd3_i(writeback_data)
+    .wd3_i(result)
 );
 
 assign writedata_o = rd2;
 
 // --- Immediate Generation ---
 wire [31:0] sign_extended_imm;
-assign sign_extended_imm = (ImmSrc_i == 0'b000) ? {{20{instr_i[11]}}, instr_i[11:0]} :  // Sign-extended immediate for I-type
-                           (ImmSrc_i == 0'b001) ? {{20{instr_i[11]}}, instr_i[11:5], instr_i[4:0]} :  // S-type (sw)
-                           (ImmSrc_i == 0'b010) ? {{21{instr_i[12]}}, instr_i[10:5], instr_i[4:1], instr_i[11]} :  // B-type 
-                           (ImmSrc_i == 0'b011) ? {{13{instr_i[20]}}, instr_i[10:1], instr_i[11], instr_i[19:12]} :  // J-type (jal)
-                           (ImmSrc_i == 0'b100) ? {{12{instr_i[31]}}, instr_i[31:12]} :  // U-type (lui)
+assign sign_extended_imm = (ImmSrc_i == 3'b000) ? {{20{instr_i[31]}}, instr_i[31:20]} :  // Sign-extended immediate for I-type
+                           (ImmSrc_i == 3'b001) ? {{20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]} :  // S-type (sw)
+                           (ImmSrc_i == 3'b010) ? {{21{instr_i[31]}}, instr_i[7], instr_i[30:25], instr_i[11:8]} :  // B-type 
+                           (ImmSrc_i == 3'b011) ? {{13{instr_i[31]}}, instr_i[19:12], instr_i[20], instr_i[30:21]} :  // J-type (jal)
+                           (ImmSrc_i == 3'b100) ? {{12{instr_i[31]}}, instr_i[31:12]} :  // U-type (lui)
                            32'b0;  // Default to zero if unrecognized
+
 
 // --- ALU Input Selection ---
 wire [31:0] alu_b;
@@ -71,11 +81,30 @@ ucsbece154a_alu alu_inst (
     .zero_o(zero_o)  // Use ALU's zero flag for branch decisions
 );
 
+// --- Data Memory ---
+wire [31:0] mem_addr;
+assign mem_addr = aluresult_o;  // Memory address is ALU result
+wire [31:0] readdata;
+assign readdata = readdata_i;  // Read data from memory
+ucsbece154a_dmem dmem_inst (
+    .clk(clk),
+    .we_i(instr_i[2]),  // memwrite is 2nd bit from opcode
+    .a_i(mem_addr),
+    .wd_i(writedata_o),
+    .rd_o(readdata)
+);
+
+
 // --- Result Selection ---
-wire [31:0] writeback_data;
-assign writeback_data = (ResultSrc_i == 2'b00) ? aluresult_o :  // ALU result
+wire [31:0] result; // added input wire to deal with implicit definition error
+// assign result = (ResultSrc_i == 2'b00) ? aluresult_o :  // ALU result
+//                         (ResultSrc_i == 2'b01) ? readdata_i :   // Memory read data
+//                         (ResultSrc_i == 2'b10) ? pc_o + sign_extended_imm :  // Immediate (for LUI)
+//                         32'b0;  // Default case to zero
+
+assign result = (ResultSrc_i == 2'b00) ? aluresult_o :  // ALU result
                         (ResultSrc_i == 2'b01) ? readdata_i :   // Memory read data
-                        (ResultSrc_i == 2'b10) ? pc_o + sign_extended_imm :  // Immediate (for LUI)
+                        (ResultSrc_i == 2'b10) ? pc_o :  // Immediate (for LUI)
                         32'b0;  // Default case to zero
 
 endmodule

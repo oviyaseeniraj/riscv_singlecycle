@@ -4,7 +4,7 @@
 // Distribution Prohibited
 
 
-`define SIM
+`define SIM 1 // added 1 to fix redefinition of '1' to '' error
 
 `define ASSERT(CONDITION, MESSAGE) if ((CONDITION)==1'b1); else begin $error($sformatf MESSAGE); end
 
@@ -67,15 +67,15 @@ reset = 0;
 for (i = 0; i < 20; i=i+1)
     @(negedge clk);
 
-`ASSERT(reg_zero==32'b0, ("reg_zero incorrect"));
-`ASSERT(reg_sp==32'hBEEF000, ("reg_sp incorrect"));
-`ASSERT(reg_gp==32'h44, ("reg_gp incorrect"));
-`ASSERT(reg_tp==32'h1, ("reg_tp incorrect"));
-`ASSERT(reg_t0==32'hb, ("reg_t0 incorrect"));
-`ASSERT(reg_t2==32'h7, ("reg_t2 incorrect"));
-`ASSERT(top.dmem.RAM[24]==32'h7, ("dmem.RAM[24] incorrect"));
-`ASSERT(top.dmem.RAM[25]==32'h19, ("dmem.RAM[25] incorrect"));
-`ASSERT(top.dmem.RAM[26]==32'hBEEF000, ("dmem.RAM[26] incorrect"));
+`ASSERT(reg_zero==32'b0, ("reg_zero incorrect"))
+`ASSERT(reg_sp==32'hBEEF000, ("reg_sp incorrect"))
+`ASSERT(reg_gp==32'h44, ("reg_gp incorrect"))
+`ASSERT(reg_tp==32'h1, ("reg_tp incorrect"))
+`ASSERT(reg_t0==32'hb, ("reg_t0 incorrect"))
+`ASSERT(reg_t2==32'h7, ("reg_t2 incorrect"))
+`ASSERT(top.dmem.RAM[24]==32'h7, ("dmem.RAM[24] incorrect"))
+`ASSERT(top.dmem.RAM[25]==32'h19, ("dmem.RAM[25] incorrect"))
+`ASSERT(top.dmem.RAM[26]==32'hBEEF000, ("dmem.RAM[26] incorrect"))
 
 //\\ =========================== \\//
 $display( "End simulation.");
