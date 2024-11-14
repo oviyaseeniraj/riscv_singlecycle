@@ -68,7 +68,6 @@ wire [31:0] readdata;
 assign readdata = readdata_i;
 
 // Result Selection MUX
-//wire [31:0] result;
 assign result = (ResultSrc_i == ResultSrc_ALU) ? aluresult_o :
                 (ResultSrc_i == ResultSrc_load) ? readdata :
                 (ResultSrc_i == ResultSrc_jal) ? (pc_o + 4) :
