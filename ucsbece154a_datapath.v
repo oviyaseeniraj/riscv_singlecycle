@@ -20,6 +20,14 @@ module ucsbece154a_datapath (
 
 `include "ucsbece154a_defines.vh"
 
+// Immediate Generation
+wire [31:0] sign_extended_imm;
+assign sign_extended_imm = (ImmSrc_i == imm_Itype) ? {{20{instr_i[31]}}, instr_i[31:20]} :
+                           (ImmSrc_i == imm_Stype) ? {{20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]} :
+                           (ImmSrc_i == imm_Btype) ? {{20{instr_i[31]}}, instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0} :
+                           (ImmSrc_i == imm_Jtype) ? {{12{instr_i[31]}}, instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0} :
+                           (ImmSrc_i == imm_Utype) ? {instr_i[31:12], 12'b0} : 32'b0;
+
 // Program Counter (PC)
 always @(posedge clk or posedge reset) begin
     if (reset) 
@@ -30,32 +38,22 @@ always @(posedge clk or posedge reset) begin
         pc_o <= pc_o + 4; // Default PC increment
 end
 
-// Immediate Generation
-wire [31:0] sign_extended_imm;
-assign sign_extended_imm = (ImmSrc_i == imm_Itype) ? {{20{instr_i[31]}}, instr_i[31:20]} :
-                           (ImmSrc_i == imm_Stype) ? {{20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]} :
-                           (ImmSrc_i == imm_Btype) ? {{20{instr_i[31]}}, instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0} :
-                           (ImmSrc_i == imm_Jtype) ? {{12{instr_i[31]}}, instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0} :
-                           (ImmSrc_i == imm_Utype) ? {instr_i[31:12], 12'b0} : 32'b0;
-
 // Register File
-wire [31:0] rd1, rd2;
+wire [31:0] rd1, result;
 ucsbece154a_rf rf (
     .clk(clk),
     .a1_i(instr_i[19:15]),
     .a2_i(instr_i[24:20]),
     .a3_i(instr_i[11:7]),
     .rd1_o(rd1),
-    .rd2_o(rd2),
+    .rd2_o(writedata_o),
     .we3_i(RegWrite_i),
     .wd3_i(result)
 );
 
-assign writedata_o = rd2;
-
 // ALU Integration
 wire [31:0] alu_b;
-assign alu_b = (ALUSrc_i) ? sign_extended_imm : rd2;
+assign alu_b = (ALUSrc_i) ? sign_extended_imm : writedata_o;
 
 ucsbece154a_alu alu_inst (
     .a_i(rd1),
@@ -70,7 +68,7 @@ wire [31:0] readdata;
 assign readdata = readdata_i;
 
 // Result Selection MUX
-wire [31:0] result;
+//wire [31:0] result;
 assign result = (ResultSrc_i == ResultSrc_ALU) ? aluresult_o :
                 (ResultSrc_i == ResultSrc_load) ? readdata :
                 (ResultSrc_i == ResultSrc_jal) ? (pc_o + 4) :
